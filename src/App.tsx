@@ -1,0 +1,170 @@
+
+import { useEffect, useState } from "react";
+
+interface Mapping {
+  find: string;
+  replace: string;
+}
+
+const STORAGE_KEY = "ai-masker-mappings";
+
+export default function App() {
+  const [mappings, setMappings] = useState<Mapping[]>([]);
+  const [sourceText, setSourceText] = useState("");
+  const [maskedText, setMaskedText] = useState("");
+  const [restoreInput, setRestoreInput] = useState("");
+  const [restoredText, setRestoredText] = useState("");
+
+  useEffect(() => {
+    const saved = localStorage.getItem(STORAGE_KEY);
+
+    if (saved) {
+      setMappings(JSON.parse(saved));
+    } else {
+      setMappings([{ find: "Marko", replace: "PERSON_001" }]);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (mappings.length > 0) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(mappings));
+    }
+  }, [mappings]);
+
+  const copy = async (text: string) => {
+    await navigator.clipboard.writeText(text);
+  };
+
+  const maskText = () => {
+    let result = sourceText;
+
+    mappings.forEach((m) => {
+      if (!m.find) return;
+      result = result.split(m.find).join(m.replace);
+    });
+
+    setMaskedText(result);
+  };
+
+  const restoreText = () => {
+    let result = restoreInput;
+
+    mappings.forEach((m) => {
+      if (!m.replace) return;
+      result = result.split(m.replace).join(m.find);
+    });
+
+    setRestoredText(result);
+  };
+
+  const addMapping = () => {
+    setMappings([...mappings, { find: '', replace: '' }]);
+  };
+
+  const removeMapping = (index: number) => {
+    setMappings(mappings.filter((_, i) => i !== index));
+  };
+
+  return (
+    <div
+      style={{
+        minHeight: '100vh',
+        background: '#f4f6f8',
+        padding: '30px',
+        fontFamily: 'Segoe UI, sans-serif'
+      }}
+    >
+      <div
+        style={{
+          maxWidth: '1200px',
+          margin: '0 auto',
+          background: 'white',
+          borderRadius: '16px',
+          padding: '24px',
+          boxShadow: '0 8px 24px rgba(0,0,0,0.1)'
+        }}
+      >
+        <h1>AI Text Masker</h1>
+        <p>Mappings are automatically saved to localStorage.</p>
+
+        <h2>Mappings</h2>
+
+        {mappings.map((m, i) => (
+          <div key={i} style={{ display: 'flex', gap: 10, marginBottom: 10 }}>
+            <input
+              style={{ flex: 1, padding: 10 }}
+              placeholder='Find'
+              value={m.find}
+              onChange={(e) => {
+                const copy = [...mappings];
+                copy[i].find = e.target.value;
+                setMappings(copy);
+              }}
+            />
+
+            <input
+              style={{ flex: 1, padding: 10 }}
+              placeholder='Replace With'
+              value={m.replace}
+              onChange={(e) => {
+                const copy = [...mappings];
+                copy[i].replace = e.target.value;
+                setMappings(copy);
+              }}
+            />
+
+            <button onClick={() => removeMapping(i)}>Remove</button>
+          </div>
+        ))}
+
+        <button onClick={addMapping}>Add Mapping</button>
+
+        <hr style={{ margin: '25px 0' }} />
+
+        <h2>Original Text</h2>
+        <button onClick={() => copy(sourceText)}>Copy</button>
+        <textarea
+          rows={8}
+          style={{ width: '100%', marginTop: 10, padding: 10 }}
+          value={sourceText}
+          onChange={(e) => setSourceText(e.target.value)}
+        />
+
+        <br /><br />
+        <button onClick={maskText}>Mask / Replace</button>
+
+        <h2>Masked Text</h2>
+        <button onClick={() => copy(maskedText)}>Copy</button>
+        <textarea
+          rows={8}
+          style={{ width: '100%', marginTop: 10, padding: 10 }}
+          value={maskedText}
+          readOnly
+        />
+
+        <hr style={{ margin: '25px 0' }} />
+
+        <h2>Text To Restore</h2>
+        <button onClick={() => copy(restoreInput)}>Copy</button>
+        <textarea
+          rows={8}
+          style={{ width: '100%', marginTop: 10, padding: 10 }}
+          value={restoreInput}
+          onChange={(e) => setRestoreInput(e.target.value)}
+        />
+
+        <br /><br />
+        <button onClick={restoreText}>Restore Backwards</button>
+
+        <h2>Restored Text</h2>
+        <button onClick={() => copy(restoredText)}>Copy</button>
+        <textarea
+          rows={8}
+          style={{ width: '100%', marginTop: 10, padding: 10 }}
+          value={restoredText}
+          readOnly
+        />
+      </div>
+    </div>
+  );
+}
